@@ -202,14 +202,13 @@ class StockMovement {
 
         // Include all requisition items except those that are substitutions or modifications because the
         // original requisition item will represent these changes
-        if (!CH.config.openboxes.api.pagination.enabled) {
-            if (requisition.requisitionItems) {
-                SortedSet<RequisitionItem> requisitionItems = new TreeSet<RequisitionItem>(requisition.requisitionItems)
-                requisitionItems.each { requisitionItem ->
-                    if (!requisitionItem.parentRequisitionItem) {
-                        StockMovementItem stockMovementItem = StockMovementItem.createFromRequisitionItem(requisitionItem)
-                        stockMovement.lineItems.add(stockMovementItem)
-                    }
+
+        if (requisition.requisitionItems) {
+            SortedSet<RequisitionItem> requisitionItems = new TreeSet<RequisitionItem>(requisition.requisitionItems)
+            requisitionItems.each { requisitionItem ->
+                if (!requisitionItem.parentRequisitionItem) {
+                    StockMovementItem stockMovementItem = StockMovementItem.createFromRequisitionItem(requisitionItem)
+                    stockMovement.lineItems.add(stockMovementItem)
                 }
             }
         }

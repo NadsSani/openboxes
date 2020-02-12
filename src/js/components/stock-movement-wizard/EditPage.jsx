@@ -37,6 +37,10 @@ const FIELDS = {
   editPageItems: {
     type: ArrayField,
     arrowsNavigation: true,
+    virtualized: true,
+    totalCount: ({ totalCount }) => totalCount,
+    isRowLoaded: ({ isRowLoaded }) => isRowLoaded,
+    loadMoreRows: ({ loadMoreRows }) => loadMoreRows(),
     rowComponent: TableRowWithSubfields,
     getDynamicRowAttr: ({ rowValues, subfield }) => {
       let className = rowValues.statusCode === 'SUBSTITUTED' ? 'crossed-out ' : '';
@@ -235,11 +239,14 @@ class EditItemsPage extends Component {
       revisedItems: [],
       values: { ...this.props.initialValues, editPageItems: [] },
       hasItemsLoaded: false,
+      totalCount: 0,
     };
 
     this.revertItem = this.revertItem.bind(this);
     this.fetchEditPageItems = this.fetchEditPageItems.bind(this);
     this.reviseRequisitionItems = this.reviseRequisitionItems.bind(this);
+    this.isRowLoaded = this.isRowLoaded.bind(this);
+    this.loadMoreRows = this.loadMoreRows.bind(this);
     this.props.showSpinner();
   }
 
@@ -302,6 +309,46 @@ class EditItemsPage extends Component {
       this.props.hideSpinner();
     });
   }
+
+  loadMoreRows({ startIndex, stopIndex }) {
+    const url = `/openboxes/api/stockMovements/${this.state.values.stockMovementId}/stockMovementItems?offset=${startIndex}&max=${stopIndex - startIndex}&stepNumber=3`;
+    apiClient.get(url)
+      .then((response) => {
+        const { data } = response.data;
+        const { totalCount } = response.data;
+
+        console.log(data);
+
+        const editPageItems = _.map(
+          data,
+          val => ({
+            ...val,
+            disabled: true,
+            quantityAvailable: val.quantityAvailable > 0 ? val.quantityAvailable : 0,
+            product: {
+              ...val.product,
+              label: `${val.productCode} ${val.productName}`,
+            },
+            substitutionItems: _.map(val.substitutionItems, sub => ({
+              ...sub,
+              requisitionItemId: val.requisitionItemId,
+            })),
+          }),
+        );
+
+        this.setState({
+          revisedItems: _.filter(editPageItems, item => item.statusCode === 'CHANGED'),
+          values: { ...this.state.values, editPageItems },
+          hasItemsLoaded: true,
+          totalCount,
+        });
+      });
+  }
+
+  isRowLoaded({ index }) {
+    return !!this.state.values.editPageItems[index];
+  }
+
 
   /**
    * Sends data of revised items with post method.
@@ -676,6 +723,9 @@ class EditItemsPage extends Component {
                 onResponse: this.fetchEditPageItems,
                 revertItem: this.revertItem,
                 reviseRequisitionItems: this.reviseRequisitionItems,
+                totalCount: this.state.totalCount,
+                loadMoreRows: this.loadMoreRows,
+                isRowLoaded: this.isRowLoaded,
                 values,
               }))}
               <div>

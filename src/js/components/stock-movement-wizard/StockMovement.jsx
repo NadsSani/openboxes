@@ -228,6 +228,7 @@ class StockMovements extends Component {
             },
           };
 
+          console.log(values);
           let page = 1;
           let prevPage = 1;
           switch (values.statusCode) {

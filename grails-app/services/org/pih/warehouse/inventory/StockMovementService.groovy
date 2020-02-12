@@ -236,9 +236,11 @@ class StockMovementService {
 
         return new PagedResultList(stockMovements, requisitions.totalCount)
     }
-
-
     StockMovement getStockMovement(String id) {
+        getStockMovement(id, false)
+    }
+
+    StockMovement getStockMovement(String id, Boolean isPaginated) {
         log.info "Getting stock movement for id ${id}"
 
         Requisition requisition = Requisition.get(id)
@@ -254,6 +256,10 @@ class StockMovementService {
         stockMovement.documents = getDocuments(stockMovement)
         log.info(">>>>>>>>>>>>>>> getDocuments: ${System.currentTimeMillis() - startTime} ms")
 
+        if (isPaginated) {
+            stockMovement.lineItems = []
+        }
+
         return stockMovement
     }
 
@@ -265,10 +271,18 @@ class StockMovementService {
     def getStockMovementItems(String id, String stepNumber, String max, String offset) {
         Requisition requisition = Requisition.get(id)
         List<StockMovementItem> stockMovementItems = []
+        List <RequisitionItem> requisitionItems = []
 
-        def requisitionItems = RequisitionItem.createCriteria().list(max: max.toInteger(), offset: offset.toInteger()) {
-            eq("requisition", requisition)
-            isNull("parentRequisitionItem")
+        if (max != null && offset != null) {
+            requisitionItems = RequisitionItem.createCriteria().list(max: max.toInteger(), offset: offset.toInteger()) {
+                eq("requisition", requisition)
+                isNull("parentRequisitionItem")
+            }
+        } else {
+            requisitionItems = RequisitionItem.createCriteria().list() {
+                eq("requisition", requisition)
+                isNull("parentRequisitionItem")
+            }
         }
         requisitionItems.each { requisitionItem ->
             StockMovementItem stockMovementItem = StockMovementItem.createFromRequisitionItem(requisitionItem)

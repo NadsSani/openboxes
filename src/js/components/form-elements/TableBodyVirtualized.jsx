@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { AutoSizer, List } from 'react-virtualized';
+import { AutoSizer, InfiniteLoader, List } from 'react-virtualized';
 
 import TableRow from './TableRow';
 
@@ -20,7 +20,9 @@ class TableBodyVirtualized extends Component {
     }
 
     const rowValues = fields.value[index];
-    const subfields = rowValues[subfieldKey];
+    console.log(fields.value);
+
+    const subfields = rowValues ? rowValues[subfieldKey] : null;
 
     if (!subfields) {
       return 28;
@@ -45,6 +47,7 @@ class TableBodyVirtualized extends Component {
     } = this.props;
     const field = `${fields.name}[${index}]`;
     const RowComponent = fieldsConfig.rowComponent || TableRow;
+    const { totalCount } = properties;
 
     return (
       <div key={key} style={style}>
@@ -53,7 +56,7 @@ class TableBodyVirtualized extends Component {
           index={index}
           properties={{
             ...properties,
-            rowCount: fields.length || 0,
+            rowCount: totalCount || 50,
           }}
           addRow={addRow}
           fieldsConfig={fieldsConfig}
@@ -66,23 +69,32 @@ class TableBodyVirtualized extends Component {
   }
 
   render() {
-    const { fields } = this.props;
+    // eslint-disable-next-line max-len
+    const { properties: { totalCount, loadMoreRows, isRowLoaded } } = this.props;
 
     return (
       <div>
-        <AutoSizer disableHeight>
-          {({ width }) => (
-            <List
-              height={445}
-              overscanRowCount={3}
-              rowCount={fields.length || 0}
-              rowHeight={this.getRowHeight}
-              rowRenderer={this.rowRenderer}
-              width={width}
-              props={this.props.properties}
-            />
+        <InfiniteLoader
+          loadMoreRows={loadMoreRows}
+          isRowLoaded={isRowLoaded}
+          rowCount={totalCount || 50}
+        >
+          {({ onRowsRendered }) => (
+            <AutoSizer disableHeight>
+              {({ width }) => (
+                <List
+                  height={445}
+                  onRowsRendered={onRowsRendered}
+                  rowCount={totalCount || 50}
+                  rowHeight={this.getRowHeight}
+                  rowRenderer={this.rowRenderer}
+                  width={width}
+                  props={this.props.properties}
+                />
+              )}
+            </AutoSizer>
           )}
-        </AutoSizer>
+        </InfiniteLoader>
       </div>
     );
   }
